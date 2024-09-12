@@ -20,6 +20,3 @@ Eyuphan Bulut
    - Difficulty connecting smart glove to the computer
    - How to access funds
    - How to connect program to robot
-   
-
-
