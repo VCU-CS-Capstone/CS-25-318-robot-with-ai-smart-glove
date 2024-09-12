@@ -1,9 +1,6 @@
 # CS 25-318 Robot With AI Smart Glove
 
-Caitlin Ngo
-Chris Hoang
-Sienna Sterling
-Erin Anderson
+Caitlin Ngo, Chris Hoang,Sienna Sterling, Erin Anderson
 
 Eyuphan Bulut
 
