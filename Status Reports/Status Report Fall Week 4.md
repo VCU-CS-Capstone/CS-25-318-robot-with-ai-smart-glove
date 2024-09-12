@@ -1,21 +1,28 @@
-# *CS 25-XXX Project Name*
+# CS 25-318 Robot With AI Smart Glove
 
-**Students' Names:**
+Caitlin Ngo
+Chris Hoang
+Sienna Sterling
+Erin Anderson
 
-**Mentor:**
-
-**Faculty Advisor:**
+Eyuphan Bulut
 
 ## 1) Accomplishments this week ##
-   - investigate databases done by student A
-   - make flowcharts done by students A and B
+   - We decided on our use case
+   - Everyone downloaded all necessary tools
+   - Budget Allocation
+   - Reaching out for external guidelines and intructions for our capstone
+   - Requesting lab access
 
 ## 2) Milestones to be completed next week ##
-   - debug the code to be performed by student C
+   - Connecting Smart glove to Rokoko Studio
+   - Reading & understanding the Smart glove data
+   - Setting up meeting for external guidance
 
 ## 3) Issues, problems or concerns ##
-   - student C needs to learn java
-   - database repository costs big $$$
+   - Difficulty connecting smart glove to the computer
+   - How to access funds
+   - How to connect program to robot
    
 
 
