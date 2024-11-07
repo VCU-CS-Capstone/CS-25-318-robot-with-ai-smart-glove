@@ -1,0 +1,94 @@
+
+public class CMSC401_A3 {
+    static int[][] graph;
+    static int N, M; // N = courses, M = halls
+
+    public static void main(String[] args) {
+        Scanner input = new Scanner(System.in);
+
+        // Read number of courses and halls
+        N = input.nextInt();
+        M = input.nextInt();
+        input.nextLine(); // Consume newline
+
+        // Create graph with source (0) and sink (N+M+1)
+        // Size is 2 + N + M to accommodate source, sink, courses, and halls
+        graph = new int[N + M + 2][N + M + 2];
+
+        // Connect source (0) to all courses (1 to N) with capacity 1
+        for (int i = 1; i <= N; i++) {
+            graph[0][i] = 1;
+        }
+
+        // Read course to hall mappings
+        for (int course = 1; course <= N; course++) {
+            String[] halls = input.nextLine().split(" ");
+            // For each hall this course can use
+            for (int j = 1; j < halls.length; j++) {
+                int hall = Integer.parseInt(halls[j]);
+                // Connect course to hall (hall numbers are offset by N in the graph)
+                graph[course][N + hall] = 1;
+            }
+        }
+
+        // Connect all halls to sink with capacity 1
+        for (int hall = 1; hall <= M; hall++) {
+            graph[N + hall][N + M + 1] = 1;
+        }
+
+        // Calculate and print max flow
+        System.out.println(maxFlow(0, N + M + 1));
+    }
+
+    static boolean bfs(int source, int sink, int[] parent) {
+        boolean[] visited = new boolean[graph.length];
+        Arrays.fill(visited, false);
+
+        Queue<Integer> queue = new LinkedList<>();
+        queue.add(source);
+        visited[source] = true;
+        parent[source] = -1;
+
+        while (!queue.isEmpty()) {
+            int u = queue.poll();
+            for (int v = 0; v < graph.length; v++) {
+                if (!visited[v] && graph[u][v] > 0) {
+                    if (v == sink) {
+                        parent[v] = u;
+                        return true;
+                    }
+                    queue.add(v);
+                    parent[v] = u;
+                    visited[v] = true;
+                }
+            }
+        }
+        return false;
+    }
+
+    static int maxFlow(int source, int sink) {
+        int[] parent = new int[graph.length];
+        int maxFlow = 0;
+
+        while (bfs(source, sink, parent)) {
+            int pathFlow = Integer.MAX_VALUE;
+
+            // Find minimum residual capacity of the edges along the path
+            for (int v = sink; v != source; v = parent[v]) {
+                int u = parent[v];
+                pathFlow = Math.min(pathFlow, graph[u][v]);
+            }
+
+            // Update residual capacities
+            for (int v = sink; v != source; v = parent[v]) {
+                int u = parent[v];
+                graph[u][v] -= pathFlow;
+                graph[v][u] += pathFlow;
+            }
+
+            maxFlow += pathFlow;
+        }
+
+        return maxFlow;
+    }
+}
