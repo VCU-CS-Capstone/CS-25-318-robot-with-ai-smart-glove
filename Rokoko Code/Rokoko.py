@@ -2,21 +2,27 @@ import socket
 import json
 import pandas as pd
 import time
+import os
 import warnings
+import joblib
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
 warnings.simplefilter('ignore')
 
-# Unified function to receive live data and store it in a DataFrame
+previous_data = {}  # store previous sensor data for movement comparison
+
+# Function to parse incoming live data, process it, and store in a DataFrame
 def live_data_to_df(data, column_names, noHeader):
-    body_data = []
-    
-    # Decode the received data
+    body_data = []  # List to store parsed data for each body part
+    # Attempt to decode received JSON data
     try:
         d = json.loads(data)
     except json.JSONDecodeError:
         print("Error decoding JSON data")
         return None, column_names, noHeader
     
-    # Ensure the data structure exists
     if "scene" not in d or "actors" not in d["scene"] or len(d["scene"]["actors"]) == 0:
         print("No actors or scene data found")
         return None, column_names, noHeader
@@ -28,50 +34,81 @@ def live_data_to_df(data, column_names, noHeader):
 
     body_parts = list(body.keys())
 
-    # Dynamically create column headers if not already created
+
+    # Add header if it's the first run
     if noHeader:
         for body_part in body_parts:
-            if "right" in body_part:
-                if any(part in body_part for part in ["Lower", "Hand", "Thumb", "Index", "Middle", "Ring", "Little"]):
-                    another_temp = [body_part + "_positionX", body_part + "_positionY", body_part + "_positionZ",
-                                    body_part + "_rotation_x", body_part + "_rotation_y", body_part + "_rotation_z", body_part + "_rotation_w"]
-                    column_names.extend(another_temp)
-        df = pd.DataFrame(columns=column_names)
+            if "left" in body_part and any(part in body_part for part in ["Lower", "Hand", "Thumb", "Index", "Middle", "Ring", "Little"]):
+                another_temp = [body_part + "_positionX", body_part + "_positionY", body_part + "_positionZ",
+                                body_part + "_rotation_x", body_part + "_rotation_y", body_part + "_rotation_z", body_part + "_rotation_w"]
+                column_names.extend(another_temp)
+        column_names.extend(["timestamp"])  # Add direction and timestamp columns
         noHeader = False
-    else:
-        df = pd.DataFrame(columns=column_names)
 
-    # Extract body part data (position and rotation) and detect movements
+    left_index_distal_position_x = None
+    left_index_proximal_position_x = None
+    # left_middle_distal_position_x = None
+    # left_middle_proximal_position_x = None
+    # left_ring_distal_position_x = None
+    # left_ring_proximal_position_x = None
+    # left_little_distal_position_x = None
+    # left_little_proximal_position_x = None
+
+    # left_index_distal_position_y = None
+    # left_index_proximal_position_y = None
+    # left_middle_distal_position_y = None
+    # left_middle_proximal_position_y = None
+    # left_ring_distal_position_y = None
+    # left_ring_proximal_position_y = None
+    # left_little_distal_position_y = None
+    # left_little_proximal_position_y = None
+
+    # left_index_distal_position_z = None
+    # left_index_proximal_position_z = None
+    # left_middle_distal_position_z = None
+    # left_middle_proximal_position_z = None
+    # left_ring_distal_position_z = None
+    # left_ring_proximal_position_z = None
+    # left_little_distal_position_z = None
+    # left_little_proximal_position_z = None
+
     for body_part in body_parts:
-        if "right" in body_part:
-            if any(part in body_part for part in ["Lower", "Hand", "Thumb", "Index", "Middle", "Ring", "Little"]):
-                b = body.get(body_part, {})
-                if "position" in b and "rotation" in b:
-                    # Check movement direction based on Y and Z position values
-                    if b["position"]["x"] < 0:
-                        print("Glove moved to the left")
-                    elif b["position"]["x"] > 0:
-                        print("Glove moved to the right")
-                    if b["position"]["y"] > 0:
-                        print("Glove moved up")
-                    elif b["position"]["y"] < 0:
-                        print("Glove moved down")
+        if "left" in body_part and any(part in body_part for part in ["Lower", "Hand", "Thumb", "Index", "Middle", "Ring", "Little"]):
+            b = body.get(body_part, {})
+            if "position" in b and "rotation" in b:
+                temp = [b["position"]["x"], b["position"]["y"], b["position"]["z"],
+                        b["rotation"]["x"], b["rotation"]["y"], b["rotation"]["z"], b["rotation"]["w"]]
+                body_data.extend(temp)
 
-                    # Append position and rotation data
-                    temp = [b["position"]["x"], b["position"]["y"], b["position"]["z"], 
-                            b["rotation"]["x"], b["rotation"]["y"], b["rotation"]["z"], b["rotation"]["w"]]
-                    body_data.extend(temp)
-    
+                # Capture the positionX values for leftIndexDistal and leftIndexProximal
+                if body_part == "leftIndexDistal":
+                    left_index_distal_position_x = b["position"]["x"]
+                if body_part == "leftIndexProximal":
+                    left_index_proximal_position_x = b["position"]["x"]
+
+                # Calculate the difference between leftIndexDistal_positionX and leftIndexProximal_positionX if both are available
+                if left_index_distal_position_x is not None and left_index_proximal_position_x is not None:
+                    position_difference = (left_index_distal_position_x - left_index_proximal_position_x)
+                    # Check if the difference is between 0.07 and 0.08
+                    # print(position_difference)
+                    # if 0.06 <= position_difference <= 0.08:
+                    #     #print("right")  # Print "right" if the difference is in the specified range
+                    #     print(position_difference)
+                    # if -0.08 <= position_difference *-1 <= -0.06:
+                    #     #print("left")  # Print "right" if the difference is in the specified range
+                    #     print(position_difference)
+
     if body_data:
-        df.loc[len(df)] = body_data
+        body_data.append(time.strftime("%Y-%m-%d %H:%M:%S"))  # Append the timestamp to the data row
+        df = pd.DataFrame([body_data], columns=column_names)
+        return df, column_names, noHeader
     else:
         return None, column_names, noHeader
+    
 
-    return df, column_names, noHeader
 
-# Function to set a preset starting position
 def set_preset_position():
-    # Define a preset position (example values, adjust as necessary)
+    # Define a preset position
     preset_position = [0.0, 0.0, 0.0,   # positionX, positionY, positionZ
                        0.0, 0.0, 0.0, 1.0]  # rotation_x, rotation_y, rotation_z, rotation_w
 
@@ -89,13 +126,19 @@ def main():
     UDP_PORT = 14043
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind((UDP_IP, UDP_PORT))
-    
-    # Step 1: Set and save the preset position
+
+
+    # Step #1: Set and save the preset position
     print("Setting preset position...")
     df = set_preset_position()  # Set the initial position
-    df.to_csv("preset_data.csv", index=False)  # Save preset data
+    df.to_csv("preset_data.csv", index=False)
     print("Preset data recorded in 'preset_data.csv'.")
+
+    column_names = []
+    noHeader = True
+    first_write = True
 
     # Step 2: Wait for user input to continue
     input("Press Enter to start continuous data recording...")
@@ -103,26 +146,28 @@ def main():
     packet_count = 0
     start_time = time.time()
     duration = 10  # Monitor the frequency for a set period (e.g., 10 seconds)
-
-    print("Press Ctrl+C to stop data recording.")
+    # print("Columns in DataFrame:", df.columns)
+    # print("Body parts in DataFrame:", df)
 
     try:
         while True:
+            # Start 5-second recording period
             # Receive data from the socket
+            print("Recording data for 5 seconds...")
             data, addr = sock.recvfrom(65000)
             data = data.decode("utf-8")
             
             # Process the data using live_data_to_df
-            live_df_data, column_names, noHeader = live_data_to_df(data, [], True)
-            
+            live_df_data, column_names, noHeader = live_data_to_df(data, column_names, noHeader)
+
             if live_df_data is not None:
                 # Increase packet count for each successful data reception
                 packet_count += 1
 
                 # Save data to a CSV file continuously
-                live_df_data.to_csv("live_data.csv", mode='a', header=False, index=False)
+                live_df_data.to_csv("live_data.csv", mode='a', header=first_write, index=False)
+                first_write = False
 
-            # Calculate and print the average recording frequency every set period
             if time.time() - start_time >= duration:
                 avg_frequency = packet_count / duration
                 print(f"Average recording frequency over the last {duration} seconds: {avg_frequency:.2f} packets/second")
@@ -130,6 +175,10 @@ def main():
                 # Reset for the next interval
                 packet_count = 0
                 start_time = time.time()
+
+            # 5-second waiting period
+            print("Waiting for 5 seconds...")
+            #time.sleep(5)
 
     except KeyboardInterrupt:
         print("Data recording stopped.")
