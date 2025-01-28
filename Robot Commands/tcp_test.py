@@ -3,7 +3,7 @@ import time
 
 """
 Note: If you have issues on the Robot Studio side of this program, check RobotStudio
-firewall settings.
+firewall settings. Make sure RobotStudio program is running before running this one.
 """
 
 def send_numbers():
