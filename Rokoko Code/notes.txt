@@ -1,0 +1,14 @@
+
+Training Data: 
+This is a labeled dataset that is used to train your machine learning model. It needs to have known inputs 
+(features like rotation_x, rotation_y, etc.) and corresponding outputs (the direction labels you're trying to predict). 
+The model uses this data to learn the relationships between the features and the target variable (i.e., the direction).
+
+Live_data: 
+is used to log the sensor data, but the model needs to be trained with labeled data first.
+
+Training Data Output should be:
+    rotation_x,rotation_y,rotation_z,rotation_w,direction
+    0.1,0.2,0.3,0.4,up
+    0.2,0.3,0.1,0.5,down
+    0.3,0.1,0.4,0.6,right
