@@ -1,0 +1,60 @@
+MODULE Main
+    VAR robtarget pCurrentPosition;
+    VAR string sensorData;
+    VAR string fileName := "HOME:/robot_control_data.txt";
+    VAR num fileHandle;
+    VAR string fileStatus;
+    
+    PROC moveIndefinitely()
+        ! Get the current position of the robot
+        pCurrentPosition := CRobT();
+    
+        WHILE TRUE DO
+            ! Open the file for reading
+            fileHandle := FOpen(fileName, "r");  ! 'r' for read mode
+            IF fileHandle >= 0 THEN
+                ! Read a line from the file
+                fileStatus := FRead(fileHandle, sensorData);
+                IF fileStatus = "OK" THEN
+                    ! Successfully read the data
+                    TPWrite sensorData;  ! Output the sensor data to the teach pendant
+                    
+                    ! Process the sensor data to determine direction
+                    IF sensorData = "stop_command" THEN
+                        StopMove;  ! Stop the robot if stop command is received
+                        FClose(fileHandle);
+                        EXIT;  ! Exit the loop to stop moving
+                    ENDIF
+                    
+                    ! Update position based on the direction of movement
+                    IF sensorData = "left" THEN
+                        pCurrentPosition.trans.x := pCurrentPosition.trans.x - 10;  ! Move left
+                    ELSEIF sensorData = "right" THEN
+                        pCurrentPosition.trans.x := pCurrentPosition.trans.x + 10;  ! Move right
+                    ELSEIF sensorData = "up" THEN
+                        pCurrentPosition.trans.z := pCurrentPosition.trans.z + 10;  ! Move up
+                    ELSEIF sensorData = "down" THEN
+                        pCurrentPosition.trans.z := pCurrentPosition.trans.z - 10;  ! Move down
+                    ENDIF
+    
+                    ! Perform the movement with the updated position
+                    MoveL pCurrentPosition, v100, z50, tool0;
+                ELSE
+                    TPWrite "Error reading file.";
+                ENDIF
+                FClose(fileHandle);  ! Close the file after reading
+            ELSE
+                TPWrite "File could not be opened.";
+            ENDIF
+    
+            WaitTime 0.1;  ! Adjust the wait time for smooth movement
+        ENDWHILE
+    ENDPROC
+    
+    PROC main()
+        ! Initialize and start movement procedure
+        moveIndefinitely;
+    ENDPROC
+
+
+ENDMODULE
