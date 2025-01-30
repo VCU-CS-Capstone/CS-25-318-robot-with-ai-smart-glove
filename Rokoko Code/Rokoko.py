@@ -71,19 +71,15 @@ def determine_direction(body):
 
     # Determine the dominant direction
     if x_positive_count >= 4:
-        direction.append("Right")
+        return 4 #right
     elif x_negative_count >= 4:
-        direction.append("Left")
-
+        return 3 #left
     if y_positive_count >= 4:
-        direction.append("Up")
+        return 1 #up
     elif y_negative_count >= 4:
-        direction.append("Down")
-
-    if z_positive_count >= 4:
-        direction.append("Forward")
+        return 2 #down
     elif z_negative_count >= 4:
-        direction.append("Backward")
+        return 0 #fist (stop)
 
     # Return a joined direction string or "None" if no direction
     return ", ".join(direction) if direction else "None"
@@ -268,7 +264,8 @@ def main():
             #    live_df_data.to_csv("live_data.csv", mode='a', header=first_write, index=False)
             #    print("Direction:", live_df_data.iloc[0]["direction"])
             #    first_write = False
-               print("Direction:", live_df_data["direction"].values[0])  # Use .values[0] to extract the first value
+               #print("Direction:", live_df_data["direction"].values[0])  # Use .values[0] to extract the first value
+               print("Direction:", determine_direction)
                live_df_data.to_csv("live_data.csv", mode='a', header=first_write, index=False)
                first_write = False
 
