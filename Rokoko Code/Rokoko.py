@@ -26,55 +26,69 @@ previous_data = {}  # store previous sensor data for movement comparison
 
 
 # Function to determine direction and return a label for CSV output
-def determine_direction(body_data):
-    
-    direction = []
-
-    # List of fingers to evaluate
-    fingers = ["Index", "Middle", "Ring"]
-
-    # Evaluate positions for each finger
-    for finger in fingers:
-        #for part in ["Proximal", "Medial", "Distal"]:       #finger position            # has the name of the finger and the finger part
-        proximal_part = f"left{finger}Proximal"         #
-        distal_part = f"left{finger}Distal"
-
-        try:
-            proximal_position = body_data[proximal_part]["_position"]
-            distal_position = body_data[distal_part]["_position"]
-            #leftIndexProximal_positionZ
-
-            # calculate difference
-            # if proximal_position and distal_position:
-            x_diffs = distal_position["X"] - proximal_position["X"]
-            y_diffs = distal_position["Y"] - proximal_position["Y"]
-                #z_diffs = distal_position["z"] - proximal_position["z"]
-
-            #Create a function that has a condition statement that states 
-            # when X values of the index, middle, ring, and pinky are positive (0.07 - 0.09) it prints "Right" and
-            if 0.07 < x_diffs < 0.09:
-                return 4     #4 for right
-            # when X values of the index, middle, ring, and pinky are negative (-0.07 to -0.09) it prints "Left" and
-            elif -0.09 < x_diffs < -0.07:
-                return 3     #3 for left
-            # when Y values of the index, middle, ring, and pinky are negative (-0.07 to -0.09) it prints "down" and 
-            if -0.09 < y_diffs < -0.07:
-                return 2     #2 for down
-            # when Y values of the index, middle, ring, and pinky are positive (0.07 - 0.09) it prints "up" and
-            elif 0.07 < y_diffs < 0.09:
-                return 1     #1 for up
-            # # when Z values of the index, middle, ring, and pinky are positive (-0.07 to -0.09) it prints "forward" and 
-            # if x_diffs > 0.07 & x_diffs < 0.09:
-            #     print ("1")     #1 for right
-            # # when Z values of the index, middle, ring, and pinky are negative (-0.07 to -0.09) it prints "backward" 
-            # if x_diffs > 0.07 & x_diffs < 0.09:
-            #     print ("1")     #1 for right
-            # # the print statements should be printed on the direction column of the data OR print out in the terminal
-            # if x_diffs > 0.07 & x_diffs < 0.09:
-            #     print ("1")     #1 for right
-        except KeyError:
-            print(f"Data for {finger} part missing.")
-            continue
+def determine_direction(df):
+    try:
+        # Get the latest valid row
+        latest_data = df.iloc[-1]
+        
+        # Store differences for all fingers
+        x_diffs_all = []
+        y_diffs_all = []
+        
+        for finger in ["Index", "Middle", "Ring"]:
+            try:
+                # Get positions
+                proximal_x = float(latest_data[f"left{finger}Proximal_positionX"])
+                proximal_y = float(latest_data[f"left{finger}Proximal_positionY"])
+                distal_x = float(latest_data[f"left{finger}Distal_positionX"])
+                distal_y = float(latest_data[f"left{finger}Distal_positionY"])
+                
+                # Skip if any values are NaN
+                if any(pd.isna([proximal_x, proximal_y, distal_x, distal_y])):
+                    continue
+                
+                # Calculate differences
+                x_diff = distal_x - proximal_x
+                y_diff = distal_y - proximal_y
+                
+                x_diffs_all.append(x_diff)
+                y_diffs_all.append(y_diff)
+                
+                # Print for debugging
+                print(f"{finger} X diff: {x_diff:.3f}, Y diff: {y_diff:.3f}")
+                
+            except (ValueError, TypeError) as e:
+                print(f"Error processing {finger}: {str(e)}")
+                continue
+        
+        # If we have valid differences, determine direction based on average movement
+        if x_diffs_all and y_diffs_all:
+            avg_x_diff = sum(x_diffs_all) / len(x_diffs_all)
+            avg_y_diff = sum(y_diffs_all) / len(y_diffs_all)
+            
+            print(f"Average X diff: {avg_x_diff:.3f}, Y diff: {avg_y_diff:.3f}")
+            
+            # Define thresholds based on the data analysis
+            x_threshold = 0.03
+            y_threshold = 0.02
+            
+            # Check for the strongest direction
+            if abs(avg_x_diff) > abs(avg_y_diff):
+                # Horizontal movement is stronger
+                if avg_x_diff > x_threshold:
+                    return 4  # right
+                elif avg_x_diff < -x_threshold:
+                    return 3  # left
+            else:
+                # Vertical movement is stronger
+                if avg_y_diff > y_threshold:
+                    return 1  # up
+                elif avg_y_diff < -y_threshold:
+                    return 2  # down
+                
+    except Exception as e:
+        print(f"Error processing DataFrame: {str(e)}")
+        
     return None
 
 def live_data_to_df(data, column_names, noHeader):
@@ -131,41 +145,6 @@ def live_data_to_df(data, column_names, noHeader):
         print("Body data is empty, nothing to save.")
         return None, column_names, noHeader
    
-#    return body_data, column_names, noHeader
-
-  
-#    for body_part in body_parts:
-#        if "left" in body_part and any(part in body_part for part in ["Lower", "Hand", "Thumb", "Index", "Middle", "Ring", "Little"]):
-#            b = body.get(body_part, {})
-#            if "position" in b and "rotation" in b:
-#                if "Distal" in body_part or "Proximal" in body_part:
-#                    finger_part = ''.join([ch for ch in body_part if ch.isalpha()])
-#                    distal_part = finger_part + "Distal"
-#                    proximal_part = finger_part + "Proximal"
-
-#                    print("Direction", determine_direction(body))
-
-
-                #    if distal_part in body and proximal_part in body:
-                #        distal_pos = body[distal_part]["position"]
-                #        proximal_pos = body[proximal_part]["position"]
-
-
-                #        if distal_pos and proximal_pos:
-                #            diff_x = distal_pos["x"] - proximal_pos["x"]
-                #            diff_y = distal_pos["y"] - proximal_pos["y"]
-
-                #            # Determine direction based on x and y values
-                #            direction_data = determine_direction(body)
-
-
-#    if body_data:
-#        body_data.append(direction_data)  # Append the direction to the data row
-#        body_data.append(time.strftime("%Y-%m-%d %H:%M:%S"))  # Append the timestamp to the data row
-#        df = pd.DataFrame([body_data], columns=column_names)
-#        return df, column_names, noHeader
-#    else:
-#        return None, column_names, noHeader
 
 def set_preset_position():
    # Define a preset position
@@ -182,65 +161,89 @@ def set_preset_position():
    df.loc[len(df)] = preset_position
    return df
 
+def setup_robot_connection(host='172.16.164.131', port=1025):
+    try:
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect((host, port))
+        print(f"Connected to RobotStudio at {host}:{port}")
+        return client
+    except Exception as e:
+        print(f"Failed to connect to RobotStudio: {e}")
+        return None
 
-# Main loop to receive data and process it
+def send_direction_to_robot(client, direction):
+    if client and direction is not None:
+        try:
+            # Simply convert the direction to string
+            message = f"{direction}\n"
+            client.send(message.encode())
+            print(f"Sent direction {direction} to RobotStudio")
+        except Exception as e:
+            print(f"Failed to send direction: {e}")
+            return False
+    return True
+
 def main():
-   UDP_IP = "127.0.0.1"
-   UDP_PORT = 14043
-
-
-   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-   sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-   sock.bind((UDP_IP, UDP_PORT))
-
-
-   print("Setting preset position...")
-   df = set_preset_position()  # Set the initial position
-   df.to_csv("preset_data.csv", index=False)
-   print("Preset data recorded in 'preset_data.csv'.")
-
-
-   column_names = []
-   noHeader = True
-   first_write = True
-
-
-   input("Press Enter to start continuous data recording...")
-
-
-   try:
-       while True:
-           # Start 5-second recording period
-           print("Recording data for 5 seconds...")
-           data, addr = sock.recvfrom(65000)
-           data = data.decode("utf-8")
-
-           live_df_data, column_names, noHeader = live_data_to_df(data, column_names, noHeader) 
-           
-
-           if live_df_data is not None:
-               #print("live_df_data:", live_df_data)  # Debug print
-               live_df = pd.DataFrame([live_df_data], columns=column_names)
-            #    print("Column names:", column_names)
-            #    print("DataFrame created:", live_df)  # Check the DataFrame
-               live_df.to_csv("live_data.csv", mode='a', header=first_write, index=False)
-               first_write = False
+    # UDP setup for glove data
+    UDP_IP = "127.0.0.1"
+    UDP_PORT = 14043
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind((UDP_IP, UDP_PORT))
+    
+    # TCP setup for RobotStudio
+    robot_client = setup_robot_connection(host='172.16.164.131', port=1025)
+    if not robot_client:
+        print("Failed to connect to RobotStudio. Exiting.")
+        return
+    
+    print("Setting preset position...")
+    df = set_preset_position()
+    df.to_csv("preset_data.csv", index=False)
+    print("Preset data recorded in 'preset_data.csv'.")
+    
+    column_names = []
+    noHeader = True
+    first_write = True
+    
+    input("Press Enter to start continuous data recording...")
+    
+    try:
+        while True:
+            print("Recording data for 5 seconds...")
+            start_time = time.time()
             
-            # Determine the direction
-           direction = determine_direction(live_df)
-           print("Direction:", direction)
-
-
-           # 5-second waiting period
-           print("Waiting for 5 seconds...")
-
-           time.sleep(5)
-
-
-   except KeyboardInterrupt:
-       print("Data recording stopped.")
-       print("Final data saved to live_data.csv.")
-
+            while time.time() - start_time < 5:
+                sock.settimeout(0.1)
+                try:
+                    data, addr = sock.recvfrom(65000)
+                    data = data.decode("utf-8")
+                    
+                    live_df_data, column_names, noHeader = live_data_to_df(data, column_names, noHeader)
+                    if live_df_data is not None:
+                        live_df = pd.DataFrame([live_df_data], columns=column_names)
+                        live_df.to_csv("live_data.csv", mode='a', header=first_write, index=False)
+                        first_write = False
+                        
+                        # Determine direction and send to RobotStudio
+                        direction = determine_direction(live_df)
+                        if direction is not None:
+                            print("Direction:", direction)
+                            if not send_direction_to_robot(robot_client, direction):
+                                # Try to reconnect if sending failed
+                                robot_client = setup_robot_connection(host='172.16.164.131', port=1025)
+                            
+                except socket.timeout:
+                    continue
+            
+            print("Waiting for 5 seconds...")
+            time.sleep(5)
+            
+    except KeyboardInterrupt:
+        print("Data recording stopped.")
+        print("Final data saved to live_data.csv.")
+        if robot_client:
+            robot_client.close()
 
 if __name__ == "__main__":
-   main()
+    main()
