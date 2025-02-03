@@ -11,7 +11,7 @@ def send_numbers():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # Robot IP address and port (update these)
     # This program is intended for people running RobotStudio from a VM on the same device.
-    robot_ip = 'enter your VMs IP'  # VM IP, changes based on who's running it. 
+    robot_ip = '172.16.164.131'  # VM IP, changes based on who's running it. 
     port = 1025
 
     try:
