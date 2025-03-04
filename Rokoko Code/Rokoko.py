@@ -1,5 +1,3 @@
-
-
 import socket
 import json
 import pandas as pd
@@ -35,14 +33,17 @@ def determine_direction(df):
         # Store differences for all fingers
         x_diffs_all = []
         y_diffs_all = []
+        z_diffs_all = []    #inward/outward
         
         for finger in ["Index", "Middle", "Ring"]:
             try:
                 # Get positions
                 proximal_x = float(latest_data[f"right{finger}Proximal_positionX"])
                 proximal_y = float(latest_data[f"right{finger}Proximal_positionY"])
+                proximal_z = float(latest_data[f"right{finger}Proximal_positionZ"])
                 distal_x = float(latest_data[f"right{finger}Distal_positionX"])
                 distal_y = float(latest_data[f"right{finger}Distal_positionY"])
+                distal_z = float(latest_data[f"right{finger}Distal_positionZ"])
                 
                 # Skip if any values are NaN
                 if any(pd.isna([proximal_x, proximal_y, distal_x, distal_y])):
@@ -51,9 +52,11 @@ def determine_direction(df):
                 # Calculate differences
                 x_diff = distal_x - proximal_x
                 y_diff = distal_y - proximal_y
+                z_diff = distal_z - proximal_z
                 
                 x_diffs_all.append(x_diff)
                 y_diffs_all.append(y_diff)
+                z_diffs_all.append(z_diff)
                 
                 # Print for debugging
                 #print(f"{finger} X diff: {x_diff:.3f}, Y diff: {y_diff:.3f}")
@@ -66,26 +69,53 @@ def determine_direction(df):
         if x_diffs_all and y_diffs_all:
             avg_x_diff = sum(x_diffs_all) / len(x_diffs_all)
             avg_y_diff = sum(y_diffs_all) / len(y_diffs_all)
+            avg_z_diff = sum(z_diffs_all) / len(z_diffs_all)
             
             #print(f"Average X diff: {avg_x_diff:.3f}, Y diff: {avg_y_diff:.3f}")
             
             # Define thresholds based on the data analysis
             x_threshold = 0.03
             y_threshold = 0.02
+
+            #    ALERT I DON'T KNOW IF THE CODE BELOW ACTUALLY IS THE TRUE THRESHOLD
+            z_threshold = 0.03
             
             # Check for the strongest direction
-            if abs(avg_x_diff) > abs(avg_y_diff):
+            if abs(avg_x_diff) > abs(avg_y_diff) and abs(avg_x_diff) > abs(avg_z_diff):   # if X is the greatest
                 # Horizontal movement is stronger
                 if avg_x_diff > x_threshold:
                     return 4  # right
                 elif avg_x_diff < -x_threshold:
                     return 3  # left
-            else:
+            elif abs(avg_y_diff) > abs(avg_x_diff) and abs(avg_y_diff) > abs(avg_z_diff):  # if Y is the greatest
                 # Vertical movement is stronger
                 if avg_y_diff > y_threshold:
                     return 1  # up
                 elif avg_y_diff < -y_threshold:
                     return 2  # down
+            elif abs(avg_z_diff) > abs(avg_x_diff) and abs(avg_z_diff) > abs(avg_y_diff):   # if Z is the greatest
+                if avg_z_diff > z_threshold:
+                    return 5
+                if avg_z_diff < z_threshold:
+                    return 6
+            else:      # return 0 becuase the direction ins't determined
+                return 0
+                
+            # CODE BEFORE THE CHANGE
+            # if abs(avg_x_diff) > abs(avg_y_diff):
+            #     # Horizontal movement is stronger
+            #     if avg_x_diff > x_threshold:
+            #         return 4  # right
+            #     elif avg_x_diff < -x_threshold:
+            #         return 3  # left
+            # else:
+            #     # Vertical movement is stronger
+            #     if avg_y_diff > y_threshold:
+            #         return 1  # up
+            #     elif avg_y_diff < -y_threshold:
+            #         return 2  # down
+            # Z movement is stronger
+            # 
                 
     except Exception as e:
         print(f"Error processing DataFrame: {str(e)}")
@@ -199,7 +229,7 @@ def main():
     udp_sock.bind((UDP_IP, UDP_PORT))
     
     # TCP setup for sending directions
-    target_ip = '172.20.10.12'  # Update with your target IP
+    target_ip = '172.20.10.11'  # Update with your target IP
     target_port = 5001  # Update with your target port
     tcp_sock = setup_tcp_connection(target_ip, target_port)
     
@@ -220,7 +250,8 @@ def main():
     
     last_direction = None
     last_direction_time = 0
-    cooldown_period = 1.0  # Seconds to wait before sending the same direction again
+    # SHOULDN'T WE CHANGE THE FOLLOWING COOL DOWN PERIOD TO 3 SECONDS????
+    cooldown_period = 1.0  # Seconds to wait before sending the same direction again 
     
     try:
         while True:
